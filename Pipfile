@@ -16,5 +16,6 @@ django-environ = "*"
 requests = "*"
 django-redis = "*"
 slackclient = "*"
+django-extensions = "*"
 
 [dev-packages]
