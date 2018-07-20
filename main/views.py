@@ -11,6 +11,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.core.exceptions import SuspiciousOperation
 from django.http import HttpResponse
+from django.utils.encoding import force_bytes, force_str
 from django.views.decorators.csrf import csrf_exempt
 from main.consumers import Consumer
 
@@ -21,11 +22,11 @@ def verify_slack_request(request):
     """ Raise SuspiciousOperation if request was not signed by Slack. """
     basestring = b":".join([
         b"v0",
-        request.META.get("HTTP_X_SLACK_REQUEST_TIMESTAMP", b"").encode("utf8"),
+        force_bytes(request.META.get("HTTP_X_SLACK_REQUEST_TIMESTAMP", b"")),
         request.body
     ])
     expected_signature = 'v0=' + hmac.new(settings.SLACK['signing_secret'], basestring, hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(expected_signature, request.META.get("HTTP_X_SLACK_SIGNATURE", "")):
+    if not hmac.compare_digest(expected_signature, force_str(request.META.get("HTTP_X_SLACK_SIGNATURE", ""))):
         raise SuspiciousOperation("Slack signature verification failed")
 
 def send_message(message_type, data):
