@@ -20,7 +20,8 @@
     });
 
     function connect(){
-      var socket = new WebSocket('ws://' + window.location.host + '/ws/');
+      var wsScheme = window.location.protocol === "https:" ? "wss://" : "ws://";
+      var socket = new WebSocket(wsScheme + window.location.host + '/ws/');
 
       socket.onmessage = function(e) {
         console.log("Got", e);
