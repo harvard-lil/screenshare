@@ -132,6 +132,9 @@ ASGI_APPLICATION = "config.routing.application"
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        "CONFIG": {
+            "hosts": [env("REDIS_URL", default="redis://127.0.0.1:6379/0")],
+        },
     },
 }
 
@@ -145,7 +148,7 @@ SLACK = {
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/0",
+        "LOCATION": env("REDIS_URL", default="redis://127.0.0.1:6379/0"),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
