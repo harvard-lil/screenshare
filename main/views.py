@@ -39,15 +39,17 @@ def send_message(message_type, data):
 def slack_event(request):
     """ Handle message from Slack. """
     verify_slack_request(request)
-    event = json.loads(request.body.decode("utf-8"))["event"]
+    event = json.loads(request.body.decode("utf-8"))
     print(event)
 
     # url verification
     if event["type"] == "url_verification":
         return HttpResponse(event["challenge"], content_type='text/plain')
 
+    event = event["event"]
+
     # message in channel
-    elif event["type"] == "message":
+    if event["type"] == "message":
 
         # message contains a file
         if event.get("subtype") == "file_share":
