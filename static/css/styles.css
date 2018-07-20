@@ -1,0 +1,18 @@
+/* add blank frame around picture */
+*{box-sizing: border-box;}
+body{
+    padding: 5%;  /* change to 0 if no frame desired */
+}
+
+/* make image fit to available space */
+html, body, #app{
+    width: 100%;
+    height: 100%;
+    margin: 0;
+}
+img {
+    object-fit: contain;  /* change to "cover" to zoom until image covers whole frame */
+    object-position: 50% 50%;  /* if using "cover", use this to slide left-right or up-down */
+    width: 100%;
+    height: 100%;
+}
