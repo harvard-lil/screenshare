@@ -53,7 +53,7 @@ def slack_event(request):
 
         # message contains a file
         if event.get("subtype") == "file_share":
-            file_info = event["file"]
+            file_info = event["files"][0]
             if file_info["filetype"] in ("jpg", "gif", "png"):
                 # if image, fetch file and send to listeners
                 file_response = requests.get(file_info["url_private"], headers={"Authorization": "Bearer %s" % settings.SLACK["bot_access_token"]})
