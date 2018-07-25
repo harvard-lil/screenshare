@@ -70,7 +70,7 @@ def slack_event(request):
         if 'night' in event["reaction"]:
             send_message("color", "#000")
         else:
-            colors = ['black', 'red', 'orange', 'yellow', 'green', 'blue', 'purple']
+            colors = ['black', 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'white', 'grey']
             for color in colors:
                 if color in event["reaction"]:
                     send_message("color", color)
