@@ -1,34 +1,33 @@
-from channels.generic.websocket import AsyncWebsocketConsumer
+from asgiref.sync import async_to_sync
+from channels.generic.websocket import WebsocketConsumer
 import json
 
-from django.core.cache import cache
+from django.conf import settings
+
+from .helpers import get_message_history, send_state
 
 
-class Consumer(AsyncWebsocketConsumer):
-    room_group_name = 'index'
+class Consumer(WebsocketConsumer):
 
-    async def connect(self):
+    def connect(self):
         # add new connections to group
-        await self.channel_layer.group_add(
-            self.room_group_name,
+        async_to_sync(self.channel_layer.group_add)(
+            settings.ROOM_NAME,
             self.channel_name
         )
-        await self.accept()
+        self.accept()
 
         # send data for last image
-        for message_type in ("image", "color"):
-            data = cache.get("previous:"+message_type)
-            if data:
-                await self.channel_layer.group_send(self.room_group_name, {"type": message_type, "data": data})
+        with get_message_history() as message_history:
+            if message_history:
+                send_state(message_history[-1])
 
-    async def disconnect(self, close_code):
+    def disconnect(self, close_code):
         # leave room group
-        await self.channel_layer.group_discard(
-            self.room_group_name,
+        async_to_sync(self.channel_layer.group_discard)(
+            settings.ROOM_NAME,
             self.channel_name)
 
-    async def image(self, event):
-        await self.send(json.dumps({"type": "image", "data": event["data"]}))
-
-    async def color(self, event):
-        await self.send(json.dumps({"type": "color", "data": event["data"]}))
+    def share_state(self, event):
+        """ Event handler to send current state to client. Triggered by send_state(). """
+        self.send(json.dumps(event['state']))

@@ -1,14 +1,14 @@
 /* add blank frame around picture */
 *{box-sizing: border-box;}
-body{
-    padding: 5%;  /* change to 0 if no frame desired */
-}
 
 /* make image fit to available space */
 html, body, #app{
     width: 100%;
     height: 100%;
     margin: 0;
+}
+#app{
+    padding: 5%;  /* change to 0 if no frame desired */
 }
 img {
     object-fit: contain;  /* change to "cover" to zoom until image covers whole frame */
