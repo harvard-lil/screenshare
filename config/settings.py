@@ -155,6 +155,8 @@ CACHES = {
     }
 }
 
+ROOM_NAME = 'index'
+
 # Activate Django-Heroku.
 import django_heroku
 django_heroku.settings(locals())

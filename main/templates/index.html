@@ -8,14 +8,15 @@
   <link rel="stylesheet" href="{% static "css/styles.css" %}" type="text/css" />
 </head>
 <body>
-  <div id="app">
-    <img :src="encoded_image">
+  <div id="app" :style="'background-color:'+color">
+    <img v-if="image" :src="image">
   </div>
   <script>
     var app = new Vue({
       el: '#app',
       data: {
-        encoded_image: ""
+        image: null,
+        color: '#fff'
       }
     });
 
@@ -25,11 +26,10 @@
 
       socket.onmessage = function(e) {
         console.log("Got", e);
-        var message = JSON.parse(e.data);
-        if(message.type === "image")
-          app.encoded_image = message.data;
-        else if(message.type === "color")
-          document.body.style.backgroundColor = message.data;
+        var state = JSON.parse(e.data);
+        Object.keys(state).forEach(function(key) {
+          app[key] = state[key];
+        });
       };
 
       socket.onclose = function(e) {
