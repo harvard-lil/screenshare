@@ -42,7 +42,7 @@ def message_for_ts(message_history, ts):
     ), (None, None))
 
 
-_state_keys = ('image', 'color')
+_state_keys = ('html', 'color')
 
 def send_state(state):
     """ Send state to listeners. """

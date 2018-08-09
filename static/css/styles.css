@@ -10,7 +10,7 @@ html, body, #app{
 #app{
     padding: 5%;  /* change to 0 if no frame desired */
 }
-img {
+#app > * {
     object-fit: contain;  /* change to "cover" to zoom until image covers whole frame */
     object-position: 50% 50%;  /* if using "cover", use this to slide left-right or up-down */
     width: 100%;

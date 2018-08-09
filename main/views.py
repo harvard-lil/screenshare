@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import json
 import logging
+import re
 
 import requests
 from django.conf import settings
@@ -48,15 +49,18 @@ def handle_reactions(message, is_most_recent):
         if is_most_recent:
             send_state({"color": message["color"]})
 
-def store_image(event, file_response):
+def store_image(id, file_response):
     """ Add requested file to message_history """
-    encoded_image = "data:%s;base64,%s" % (
+    encoded_image = "<img src='data:%s;base64,%s'>" % (
         file_response.headers['Content-Type'],
         base64.b64encode(file_response.content).decode())
+    store_message(id, encoded_image)
+
+def store_message(id, html):
     with get_message_history() as message_history:
         message_history.append({
-            "id": event['ts'],
-            "image": encoded_image,
+            "id": id,
+            "html": html,
             "reactions": [],
             "color": "#fff",
         })
@@ -100,29 +104,51 @@ def slack_event(request):
                 if file_response.headers['Content-Type'].startswith('text/html'):
                     logger.error("Failed to fetch image; check bot_access_token")
                 else:
-                    store_image(event, file_response)
+                    store_image(event['ts'], file_response)
 
-        # handle image URL
-        elif event.get('message') and event['message'].get('attachments') and event['message']['attachments'][0].get('image_url'):
-            # what we get when slack unfurls an image URL -- a nested message:
-            # {
-            #   'type': 'message',
-            #   'subtype': 'message_changed',
-            #   'message': {
-            #       'attachments': [{
-            #           'image_url': 'some external url'
-            #       }],
-            #      'ts': '1532713362.000505',
-            #   },
-            # }
-            try:
-                file_response = requests.get(event['message']['attachments'][0]['image_url'])
-                assert file_response.ok
-                assert any(file_response.headers['Content-Type'].startswith(prefix) for prefix in ('image/jpeg', 'image/gif', 'image/png'))
-            except (requests.RequestException, AssertionError) as e:
-                logger.error("Failed to fetch URL: %s" % e)
-            else:
-                store_image(event['message'], file_response)
+        # handle pasted URL
+        elif message_type == "message_changed":
+            # this is what we get when slack unfurls an image URL -- a nested message with attachments
+            message = event['message']
+            if message.get('attachments'):
+                attachment = message['attachments'][0]
+
+                # video URL
+                if 'video_html' in attachment:
+                    # {
+                    #   'type': 'message',
+                    #   'subtype': 'message_changed',
+                    #   'message': {
+                    #       'attachments': [{
+                    #           'video_html': '<iframe width="400" height="225" ...></iframe>'
+                    #       }],
+                    #      'ts': '1532713362.000505',
+                    #   },
+                    # }
+                    html = attachment['video_html']
+                    html = re.sub(r'width="\d+" height="\d+" ', '', html)
+                    store_message(message['ts'], html)
+
+                # image URL
+                elif 'image_url' in attachment:
+                    # {
+                    #   'type': 'message',
+                    #   'subtype': 'message_changed',
+                    #   'message': {
+                    #       'attachments': [{
+                    #           'image_url': 'some external url'
+                    #       }],
+                    #      'ts': '1532713362.000505',
+                    #   },
+                    # }
+                    try:
+                        file_response = requests.get(attachment['image_url'])
+                        assert file_response.ok
+                        assert any(file_response.headers['Content-Type'].startswith(prefix) for prefix in ('image/jpeg', 'image/gif', 'image/png'))
+                    except (requests.RequestException, AssertionError) as e:
+                        logger.error("Failed to fetch URL: %s" % e)
+                    else:
+                        store_image(message['ts'], file_response)
 
         # handle message deleted
         elif message_type == "message_deleted" and event.get('previous_message'):
