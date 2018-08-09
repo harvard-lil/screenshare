@@ -8,14 +8,12 @@
   <link rel="stylesheet" href="{% static "css/styles.css" %}" type="text/css" />
 </head>
 <body>
-  <div id="app" :style="'background-color:'+color">
-    <img v-if="image" :src="image">
-  </div>
+  <div id="app" :style="'background-color:'+color" v-html="html"></div>
   <script>
     var app = new Vue({
       el: '#app',
       data: {
-        image: null,
+        html: null,
         color: '#fff'
       }
     });
