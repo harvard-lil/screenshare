@@ -15,6 +15,8 @@ from main.helpers import get_message_history, message_for_ts, send_state
 logger = logging.getLogger(__name__)
 
 
+### helpers ###
+
 def verify_slack_request(request):
     """ Raise SuspiciousOperation if request was not signed by Slack. """
     basestring = b":".join([
@@ -46,12 +48,28 @@ def handle_reactions(message, is_most_recent):
         if is_most_recent:
             send_state({"color": message["color"]})
 
+def store_image(event, file_response):
+    """ Add requested file to message_history """
+    encoded_image = "data:%s;base64,%s" % (
+        file_response.headers['Content-Type'],
+        base64.b64encode(file_response.content).decode())
+    with get_message_history() as message_history:
+        message_history.append({
+            "id": event['ts'],
+            "image": encoded_image,
+            "reactions": [],
+            "color": "#fff",
+        })
+        send_state(message_history[-1])
+
+### views ###
+
 @csrf_exempt
 def slack_event(request):
     """ Handle message from Slack. """
     verify_slack_request(request)
     event = json.loads(request.body.decode("utf-8"))
-    print(event)
+    logger.info(event)
 
     # url verification
     if event["type"] == "url_verification":
@@ -61,21 +79,20 @@ def slack_event(request):
 
     # message in channel
     if event["type"] == "message":
-        # {
-        #   'type': 'message',
-        #   'files': [{
-        #       'filetype': 'png',
-        #       'url_private': 'https://files.slack.com/files-pri/T02RW19TT-FBY895N1Z/image.png'
-        #   }],
-        #   'ts': '1532713362.000505',
-        #   'channel': 'CBU9W589K',
-        #   'subtype': 'file_share',
-        # }
 
         message_type = event.get("subtype")
 
-        # message contains a file
+        # handle uploaded image
         if message_type == "file_share":
+            # {
+            #   'type': 'message',
+            #   'files': [{
+            #       'filetype': 'png',
+            #       'url_private': 'https://files.slack.com/files-pri/T02RW19TT-FBY895N1Z/image.png'
+            #   }],
+            #   'ts': '1532713362.000505',
+            #   'subtype': 'file_share',
+            # }
             file_info = event["files"][0]
             if file_info["filetype"] in ("jpg", "gif", "png"):
                 # if image, fetch file and send to listeners
@@ -83,19 +100,32 @@ def slack_event(request):
                 if file_response.headers['Content-Type'].startswith('text/html'):
                     logger.error("Failed to fetch image; check bot_access_token")
                 else:
-                    encoded_image = "data:%s;base64,%s" % (
-                        file_response.headers['Content-Type'],
-                        base64.b64encode(file_response.content).decode())
-                    with get_message_history() as message_history:
-                        message_history.append({
-                            "id": event['ts'],
-                            "image": encoded_image,
-                            "reactions": [],
-                            "color": "#fff",
-                        })
-                        send_state(message_history[-1])
+                    store_image(event, file_response)
 
-        elif message_type == "message_deleted":
+        # handle image URL
+        elif event.get('message') and event['message'].get('attachments') and event['message']['attachments'][0].get('image_url'):
+            # what we get when slack unfurls an image URL -- a nested message:
+            # {
+            #   'type': 'message',
+            #   'subtype': 'message_changed',
+            #   'message': {
+            #       'attachments': [{
+            #           'image_url': 'some external url'
+            #       }],
+            #      'ts': '1532713362.000505',
+            #   },
+            # }
+            try:
+                file_response = requests.get(event['message']['attachments'][0]['image_url'])
+                assert file_response.ok
+                assert any(file_response.headers['Content-Type'].startswith(prefix) for prefix in ('image/jpeg', 'image/gif', 'image/png'))
+            except (requests.RequestException, AssertionError) as e:
+                logger.error("Failed to fetch URL: %s" % e)
+            else:
+                store_image(event['message'], file_response)
+
+        # handle message deleted
+        elif message_type == "message_deleted" and event.get('previous_message'):
             with get_message_history() as message_history:
                 message, is_most_recent = message_for_ts(message_history, event['previous_message']['ts'])
                 if message:
