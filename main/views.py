@@ -4,8 +4,9 @@ import hmac
 import json
 import logging
 import re
-
 import requests
+import threading
+
 from django.conf import settings
 from django.core.exceptions import SuspiciousOperation
 from django.http import HttpResponse
@@ -72,6 +73,14 @@ def store_message(id, html):
 def slack_event(request):
     """ Handle message from Slack. """
     verify_slack_request(request)
+
+    # handle event in a background thread so Slack doesn't resend if it takes too long
+    threading.Thread(target=handle_slack_event, args=(request,)).start()
+
+    # 200 to tell Slack not to resend
+    return HttpResponse()
+
+def handle_slack_event(request):
     event = json.loads(request.body.decode("utf-8"))
     logger.info(event)
 
@@ -186,5 +195,3 @@ def slack_event(request):
                 else:
                     handle_reactions(message, is_most_recent)
 
-    # tell Slack not to resend
-    return HttpResponse()
