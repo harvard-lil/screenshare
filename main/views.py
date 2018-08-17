@@ -67,6 +67,14 @@ def store_message(id, html):
         })
         send_state(message_history[-1])
 
+def delete_message(id):
+    with get_message_history() as message_history:
+        message, is_most_recent = message_for_ts(message_history, id)
+        if message:
+            message_history.remove(message)
+            if is_most_recent and message_history:
+                send_state(message_history[-1])
+
 ### views ###
 
 @csrf_exempt
@@ -119,6 +127,7 @@ def handle_slack_event(request):
         elif message_type == "message_changed":
             # this is what we get when slack unfurls an image URL -- a nested message with attachments
             message = event['message']
+
             if message.get('attachments'):
                 attachment = message['attachments'][0]
 
@@ -159,14 +168,13 @@ def handle_slack_event(request):
                     else:
                         store_image(message['ts'], file_response)
 
+            elif event['previous_message'].get('attachments'):
+                # if edited message doesn't have attachment but previous_message did, attachment was hidden -- delete
+                delete_message(event['previous_message']['ts'])
+
         # handle message deleted
         elif message_type == "message_deleted" and event.get('previous_message'):
-            with get_message_history() as message_history:
-                message, is_most_recent = message_for_ts(message_history, event['previous_message']['ts'])
-                if message:
-                    message_history.pop()
-                    if is_most_recent and message_history:
-                        send_state(message_history[-1])
+            delete_message(event['previous_message']['ts'])
 
     # handle reactions
     elif event["type"] == "reaction_added":
