@@ -17,5 +17,6 @@ django-redis = "*"
 slackclient = "*"
 django-extensions = "*"
 whitenoise = "*"
+twisted = "*"
 
 [dev-packages]
