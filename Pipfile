@@ -7,7 +7,7 @@ name = "pypi"
 python_version = "3.6"
 
 [packages]
-django = "~=2.1"
+django = "~=2.2"
 channels = "~=2.1"
 channels-redis = "~=2.2"
 django-environ = "*"
