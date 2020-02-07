@@ -82,20 +82,22 @@ def slack_event(request):
     """ Handle message from Slack. """
     verify_slack_request(request)
 
-    # handle event in a background thread so Slack doesn't resend if it takes too long
-    threading.Thread(target=handle_slack_event, args=(request,)).start()
-
-    # 200 to tell Slack not to resend
-    return HttpResponse()
-
-def handle_slack_event(request):
     event = json.loads(request.body.decode("utf-8"))
     logger.info(event)
 
     # url verification
     if event["type"] == "url_verification":
         return HttpResponse(event["challenge"], content_type='text/plain')
+    else:
+        # handle event in a background thread so Slack doesn't resend
+        # if it takes too long
+        threading.Thread(target=handle_slack_event, args=(event,)).start()
 
+        # 200 to tell Slack not to resend
+        return HttpResponse()
+
+
+def handle_slack_event(event):
     event = event["event"]
 
     # message in channel
