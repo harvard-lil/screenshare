@@ -140,7 +140,6 @@ CHANNEL_LAYERS = {
 # slack secrets
 SLACK = {
     'signing_secret': env.bytes("SLACK_SIGNING_SECRET"),
-    'access_token': env("SLACK_ACCESS_TOKEN"),
     'bot_access_token': env("SLACK_BOT_ACCESS_TOKEN"),
 }
 
