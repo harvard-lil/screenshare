@@ -32,3 +32,12 @@ to restrict access to the `/` endpoint.
 Prior to a production deployment, you may want to try this out
 locally, using [ngrok](https://ngrok.com/) to expose the service to
 Slack.
+
+Development
+-----------
+
+For development, use [Poetry](https://python-poetry.org/), but make
+sure to export the conventional requirements file f you make changes
+to `poetry.lock`:
+
+    poetry export -o requirements.txt
