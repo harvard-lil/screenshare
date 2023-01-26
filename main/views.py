@@ -30,7 +30,7 @@ def verify_slack_request(request):
     if not hmac.compare_digest(expected_signature, force_str(request.META.get("HTTP_X_SLACK_SIGNATURE", ""))):
         raise SuspiciousOperation("Slack signature verification failed")
 
-colors = ['black', 'red', 'orange', 'yellow', 'green', 'blue', 'purple']
+colors = ['black', 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'brown']
 def handle_reactions(message, is_most_recent):
     old_color = message['color']
     new_color = None
