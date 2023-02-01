@@ -43,6 +43,9 @@ def handle_reactions(message, is_most_recent):
                 for color in colors
                 if color in reaction
             ), None)
+        if new_color == 'brown':
+            # saddle brown
+            new_color = '#8b4513'
         if new_color:
             break
     if old_color != new_color:
