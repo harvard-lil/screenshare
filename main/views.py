@@ -53,6 +53,18 @@ def handle_reactions(message, is_most_recent):
         if is_most_recent:
             send_state({"color": message["color"]})
 
+def store_fire(id):
+    """ Add an ascii fire video to message history """
+    video_html = f"""
+        <video class="ascii-fire" controls loop autoplay muted>
+          <source src="{ settings.ASCII_FIRE_URL }" type="video/mp4">
+          Sorry, your browser doesn't support embedded videos, but don't worry, you can
+            <a href="{ settings.ASCII_FIRE_URL }">download it</a>
+          and watch it with your favorite video player!
+        </video>
+    """
+    store_message(id, video_html, 'black')
+
 def store_image(id, file_response):
     """ Add requested file to message_history """
     encoded_image = "<img src='data:%s;base64,%s'>" % (
@@ -60,13 +72,13 @@ def store_image(id, file_response):
         base64.b64encode(file_response.content).decode())
     store_message(id, encoded_image)
 
-def store_message(id, html):
+def store_message(id, html, color=None):
     with get_message_history() as message_history:
         message_history.append({
             "id": id,
             "html": html,
             "reactions": [],
-            "color": "#fff",
+            "color": color or "#fff",
         })
         send_state(message_history[-1])
 
@@ -180,6 +192,17 @@ def handle_slack_event(event):
         # handle message deleted
         elif message_type == "message_deleted" and event.get('previous_message'):
             delete_message(event['previous_message']['ts'])
+
+        # handle regular messages (not including threads)
+        elif message_type is None:
+            # {
+            #     "type": "message",
+            #     "text": "Hello world",
+            #     "ts": "1355517523.000005"
+            # }
+            if ":hotfire:" in event.get("text", ""):
+                store_fire(event["ts"])
+
 
     # handle reactions
     elif event["type"] == "reaction_added":
