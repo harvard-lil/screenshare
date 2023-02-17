@@ -188,3 +188,4 @@ LOGGING = {
     }
 }
 
+ASCII_FIRE_URL = env("ASCII_FIRE_URL")
