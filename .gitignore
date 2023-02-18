@@ -1,4 +1,7 @@
 venv
+.python-version
 *.pyc
 staticfiles
 *.sqlite3
+*.rdb
+config/.env
