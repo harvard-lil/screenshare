@@ -193,7 +193,7 @@ def handle_slack_event(event):
         elif message_type == "message_deleted" and event.get('previous_message'):
             delete_message(event['previous_message']['ts'])
 
-        # handle regular messages (not including threads)
+        # handle regular messages (including within threads)
         elif message_type is None:
             # {
             #     "type": "message",
