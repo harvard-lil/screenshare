@@ -260,7 +260,7 @@ def handle_slack_event(event):
             if ":hotfire:" in event.get("text", ""):
                 store_fire(event["ts"])
 
-            elif ":milky_way" in event.get("text", ""):
+            elif ":milky_way:" in event.get("text", ""):
                 store_astronomy_image(event["ts"], random_day="random" in event.get("text", ""))
 
 
