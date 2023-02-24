@@ -189,3 +189,4 @@ LOGGING = {
 }
 
 ASCII_FIRE_URL = env("ASCII_FIRE_URL")
+DEFAULT_POST_CHANNEL = env("POST_CHANNEL", default="#screenshare")
