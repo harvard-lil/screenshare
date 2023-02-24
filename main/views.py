@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import json
 import logging
+import random
 import re
 import requests
 import threading
@@ -64,6 +65,35 @@ def store_fire(id):
         </video>
     """
     store_message(id, video_html, 'black')
+
+def store_astronomy_image(id, random_day=False):
+    """ Add NASA's astronomy image of the day to message history """
+    apod_url = "https://apod.nasa.gov/apod"
+
+    # Retrieve list of available images
+    archive_url = f"{apod_url}/archivepix.html"
+    r = requests.get(archive_url, timeout=5)
+    assert r.status_code == 200, f"{archive_url} returned {r.status_code}: {r.text}"
+    pic_tuples = re.findall(r"(\d\d\d\d .*\d\d): +<a href=\"(.*)\">(.*?)</a>", r.text)
+    assert pic_tuples, "No NASA astronomy images of the day found: has the page's markup changed?"
+
+    # Select an image
+    if random_day:
+        target = random.choice(pic_tuples)
+    else:
+        target = pic_tuples[0]
+
+    # Get the image's URL and description
+    target_day_url = f"{apod_url}/{target[1]}"
+    r = requests.get(target_day_url, timeout=5)
+    assert r.status_code == 200, f"{archive_url} returned {r.status_code}: {r.text}"
+    [pic_relative_url] = re.findall(r"<a href=\"(image/.*?)\">", r.text)
+    [description] = re.findall(r"Explanation: </b>\s+(.*?)\s+<p>\s*<center>", r.text, flags=re.MULTILINE|re.DOTALL)
+
+    # Store the image
+    store_message(id, f"<image src={apod_url}/{pic_relative_url}>", 'black')
+
+    # Reply to Slack with information about what is being displayed
 
 def store_image(id, file_response):
     """ Add requested file to message_history """
@@ -202,6 +232,9 @@ def handle_slack_event(event):
             # }
             if ":hotfire:" in event.get("text", ""):
                 store_fire(event["ts"])
+
+            elif ":milky_way" in event.get("text", ""):
+                store_astronomy_image(event["ts"], random_day="random" in event.get("text", ""))
 
 
     # handle reactions
