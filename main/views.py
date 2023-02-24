@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import json
 import logging
+import random
 import re
 import requests
 import threading
@@ -12,7 +13,7 @@ from django.core.exceptions import SuspiciousOperation
 from django.http import HttpResponse
 from django.utils.encoding import force_bytes, force_str
 from django.views.decorators.csrf import csrf_exempt
-from main.helpers import get_message_history, message_for_ts, send_state
+from main.helpers import get_message_history, message_for_ts, send_state, send_to_slack
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +65,62 @@ def store_fire(id):
         </video>
     """
     store_message(id, video_html, 'black')
+
+def store_astronomy_image(id, random_day=False, attempts=0):
+    """ Add NASA's astronomy image of the day to message history """
+    apod_url = "https://apod.nasa.gov/apod"
+
+    # Retrieve list of available images:
+    # e.g. [('2015 January 01', 'ap150101.html', 'Vela Supernova Remnant')]
+    archive_url = f"{apod_url}/archivepix.html"
+    r = requests.get(archive_url, timeout=5)
+    assert r.status_code == 200, f"{archive_url} returned {r.status_code}: {r.text}"
+    pic_tuples = re.findall(r"(\d\d\d\d .*\d\d): +<a href=\"(.*)\">(.*?)</a>", r.text)
+    assert pic_tuples, "No NASA astronomy images of the day found: has the page's markup changed?"
+
+    # Select an image
+    if random_day:
+        target = random.choice(pic_tuples)
+    else:
+        target = pic_tuples[0]
+
+    # Get the image's URL and description
+    target_day_url = f"{apod_url}/{target[1]}"
+    r = requests.get(target_day_url, timeout=5)
+    assert r.status_code == 200, f"{archive_url} returned {r.status_code}: {r.text}"
+    text = r.text.replace("\n", " ")  # Remove newlines for easier parsing
+    try:
+        [pic_relative_url] = re.findall(r"<a\s+?href=\s*?\"(image/.*?)\"\s*?>", text)
+        [description] = re.findall(r"Explanation: </b>\s+(.*?)\s+<p>\s*<center>", text)
+    except ValueError:
+        # if parsing failed, try again for some random day
+        if attempts < 3:
+            store_astronomy_image(id, True, attempts + 1)
+        else:
+            raise
+
+    # Store the image
+    store_message(id, f"<image src={apod_url}/{pic_relative_url}>", 'black')
+
+    # Format the image description for display.
+    # First, make relative URLs absolute.
+    for url in re.findall(r"<a\s*?href=\s*?\"(.+?)\"\s*?>", description):
+        if not url.startswith('http'):
+            description = re.sub(url, f"{apod_url}/{url}", description)
+    # Next, convert the links to the format expected by Slack
+    description = re.sub(r"<a\s*?href=\s*?\"(.+?)\"\s*?>(.+?)</a>", r"<\1|\2>", description)
+
+    # Reply to Slack with information about what is being displayed
+    txt = f"""
+*{target[2]}*
+<{apod_url}/{target[1]}|NASA's Astronomy Picture of the Day>
+{target[0]}
+--------------------
+
+{description}"""
+
+    send_to_slack(settings.DEFAULT_POST_CHANNEL, id, txt)
+
 
 def store_image(id, file_response):
     """ Add requested file to message_history """
@@ -193,7 +250,7 @@ def handle_slack_event(event):
         elif message_type == "message_deleted" and event.get('previous_message'):
             delete_message(event['previous_message']['ts'])
 
-        # handle regular messages (not including threads)
+        # handle regular messages (including within threads)
         elif message_type is None:
             # {
             #     "type": "message",
@@ -202,6 +259,9 @@ def handle_slack_event(event):
             # }
             if ":hotfire:" in event.get("text", ""):
                 store_fire(event["ts"])
+
+            elif ":milky_way:" in event.get("text", ""):
+                store_astronomy_image(event["ts"], random_day="random" in event.get("text", ""))
 
 
     # handle reactions
