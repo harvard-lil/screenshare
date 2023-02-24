@@ -65,7 +65,7 @@ def send_to_slack(channel, thread_ts, text):
     client = WebClient(token=settings.SLACK['bot_access_token'])
     try:
         response = client.chat_postMessage(
-            channel=f"{channel}",
+            channel=channel,
             thread_ts=thread_ts,
             text=text
         )
