@@ -92,7 +92,12 @@ Development
 -----------
 
 For development, use [Poetry](https://python-poetry.org/), but make
-sure to export the conventional requirements file f you make changes
+sure to export the conventional requirements file if you make changes
 to `poetry.lock`:
 
     poetry export -o requirements.txt
+
+Note that `daphne`, when run as shown in the `ngrok` example above,
+does not auto-reload on code changes. [This
+issue](https://github.com/django/daphne/issues/9) suggests switching
+to [uvicorn](https://www.uvicorn.org/) for an ASGI server.
