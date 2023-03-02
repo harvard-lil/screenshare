@@ -23,10 +23,30 @@ of Settings/Basic Information) and `SLACK_BOT_ACCESS_TOKEN` ("Bot User
 OAuth Token" in the OAuth & Permissions section of the app's config);
 see `config/.env.example`.
 
-In production, this system is running on a Dokku instance. (TODO: add
-instructions.) It used to be set up on a VM running Debian, with the
+In production, this system is running on a Dokku instance. The
+complete (?) sequence for setting it up is
+
+```
+dokku apps:create screenshare
+dokku redis:create screenshare-store
+dokku redis:link screenshare-store screenshare
+dokku domains:set screenshare <your domain>
+dokku letsencrypt:enable screenshare
+dokku config:set --no-restart screenshare "SECRET_KEY=..."
+dokku config:set --no-restart screenshare "SLACK_SIGNING_SECRET=..."
+dokku config:set --no-restart screenshare "SLACK_BOT_ACCESS_TOKEN=..."
+dokku config:set --no-restart screenshare "ALLOWED_HOSTS=<your domain>"
+dokku config:set --no-restart screenshare "POST_CHANNEL=..."
+dokku config:set --no-restart screenshare "ASCII_FIRE_URL=..."
+```
+
+Finally, having set up your git remote with something like `git remote
+add dokku dokku@<your dokku instance>:screenshare`, deploy with `git
+push dokku develop`.
+
+(Screenshare used to be set up on a VM running Debian, with the
 application served by daphne via systemd, and exposed with
-nginx. Important dependencies include `redis-server`.
+nginx. Important dependencies include `redis-server`.)
 
 Depending on your setup, you may want to use a firewall and/or nginx
 to restrict access to the `/` endpoint.
@@ -65,7 +85,7 @@ You should now be able to open http://127.0.0.1:8000/ (or the `ngrok`
 endpoint), post an image to the channel you added the app to, and see
 it appear in your browser.
 
-(Next steps will be to script this, and/or embody it in a `docker
+(Next steps might be to script this, and/or embody it in a `docker
 compose` setup.)
 
 Development
