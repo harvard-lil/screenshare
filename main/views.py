@@ -206,7 +206,7 @@ def delete_message(id):
 @csrf_exempt
 def slack_event(request):
     """ Handle message from Slack. """
-    # verify_slack_request(request)
+    verify_slack_request(request)
 
     event = json.loads(request.body.decode("utf-8"))
     logger.info(event)
