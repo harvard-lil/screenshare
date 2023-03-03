@@ -1,13 +1,13 @@
 /* add blank frame around picture */
-*{box-sizing: border-box;}
+* {  box-sizing: border-box; }
 
 /* make image fit to available space */
-html, body, #app{
+html, body, #app {
     width: 100%;
     height: 100%;
     margin: 0;
 }
-#app{
+#app {
     padding: 5%;  /* change to 0 if no frame desired */
 }
 #app > * {
@@ -20,4 +20,8 @@ html, body, #app{
 /* make the ascii fire full-screen */
 #app:has(video.ascii-fire) {
     padding: 0;
+}
+
+iframe.youtube {
+    border: 0;
 }
