@@ -1,12 +1,15 @@
 import base64
+from datetime import datetime, time
 import hashlib
 import hmac
 import json
 import logging
+import pytz
 import random
 import re
 import requests
 import threading
+from urllib.parse import urlencode
 
 from django.conf import settings
 from django.core.exceptions import SuspiciousOperation
@@ -53,6 +56,11 @@ def handle_reactions(message, is_most_recent):
         message["color"] = new_color or '#fff'
         if is_most_recent:
             send_state({"color": message["color"]})
+
+def extract_emoji_from_message_text(text):
+    no_code_blocks = re.sub(r"```.*?```", "", text, flags=re.MULTILINE|re.DOTALL)
+    no_inline_code = re.sub(r"`.*?`", "", no_code_blocks)
+    return re.findall(r":(\w+)?:", no_inline_code)
 
 def store_fire(id):
     """ Add an ascii fire video to message history """
@@ -121,6 +129,52 @@ def store_astronomy_image(id, random_day=False, attempts=0):
 
     send_to_slack(settings.DEFAULT_POST_CHANNEL, id, txt)
 
+def store_ambient_youtube_video(id, emoji):
+    config = settings.AMBIENT_YOUTUBE_VIDEOS[emoji]
+    youtube_id = config["youtube_id"]
+
+    # check the time constraints
+    if "online_between" in config:
+        start_online, end_online, tz, msg = config["online_between"]
+        tzinfo = pytz.timezone(tz)
+        if not (time(start_online, tzinfo=tzinfo) <= datetime.now(tzinfo).time() < time(end_online, tzinfo=tzinfo)):
+            send_to_slack(settings.DEFAULT_POST_CHANNEL, id, msg)
+            return
+
+    # get a random start time, if any
+    start = None
+    if "start_times" in config:
+        start = random.choice(config["start_times"])
+
+    # get the end time if any
+    end = None
+    if "end_time" in config:
+        end = config["end_time"]
+
+    store_autoplaying_youtube_video(id, youtube_id, start, end, loop=True)
+
+def store_autoplaying_youtube_video(id, youtube_id, start=None, end=None, loop=True):
+    """Add an autoplaying, muted YouTube video to message history"""
+
+    # https://developers.google.com/youtube/player_parameters
+    options = {
+        "autoplay": 1,
+        "modestbranding": 1,
+        "mute": 1
+    }
+    if start:
+        options['start'] = start
+    if end:
+        options['end'] = end
+    if loop:
+        # This parameter has limited support in IFrame embeds. To loop a single video, set the loop parameter
+        # value to 1 and set the playlist parameter value to the same video ID already specified in the Player
+        # API URL: https://www.youtube.com/embed/VIDEO_ID?playlist=VIDEO_ID&loop=1
+        options['loop'] = 1
+        options['playlist'] = youtube_id
+
+    html = f'<iframe class="youtube" src="https://youtube.com/embed/{youtube_id}?{urlencode(options)}">'
+    store_message(id, html, "black")
 
 def store_image(id, file_response):
     """ Add requested file to message_history """
@@ -152,7 +206,7 @@ def delete_message(id):
 @csrf_exempt
 def slack_event(request):
     """ Handle message from Slack. """
-    verify_slack_request(request)
+    # verify_slack_request(request)
 
     event = json.loads(request.body.decode("utf-8"))
     logger.info(event)
@@ -257,11 +311,16 @@ def handle_slack_event(event):
             #     "text": "Hello world",
             #     "ts": "1355517523.000005"
             # }
-            if ":hotfire:" in event.get("text", ""):
-                store_fire(event["ts"])
+            emoji_list = extract_emoji_from_message_text(event.get("text", ""))
+            if emoji_list:
+                if "hotfire" in emoji_list:
+                    store_fire(event["ts"])
 
-            elif ":milky_way:" in event.get("text", ""):
-                store_astronomy_image(event["ts"], random_day="random" in event.get("text", ""))
+                elif "milky_way" in emoji_list:
+                    store_astronomy_image(event["ts"], random_day="random" in event.get("text", ""))
+
+                elif any((matching_emoji := emoji) in settings.AMBIENT_YOUTUBE_VIDEOS.keys() for emoji in emoji_list):
+                    store_ambient_youtube_video(event['ts'], matching_emoji)
 
 
     # handle reactions

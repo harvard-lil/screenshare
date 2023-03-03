@@ -8,8 +8,10 @@ https://docs.djangoproject.com/en/2.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/2.0/ref/settings/
 """
+import json
 from pathlib import Path
 import environ
+
 env = environ.Env(
     # set casting, default value
     DEBUG=(bool, False)
@@ -188,5 +190,10 @@ LOGGING = {
     }
 }
 
-ASCII_FIRE_URL = env("ASCII_FIRE_URL")
+ASCII_FIRE_URL = env("ASCII_FIRE_URL", default=None)
 DEFAULT_POST_CHANNEL = env("POST_CHANNEL", default="#screenshare")
+
+AMBIENT_YOUTUBE_VIDEOS = {}
+for video in (v for k,v in env.ENVIRON.items() if k.startswith('AMBIENT_YOUTUBE_VIDEO')):
+    emoji, config = json.loads(video)
+    AMBIENT_YOUTUBE_VIDEOS[emoji] = config
