@@ -313,7 +313,7 @@ def handle_slack_event(event):
             # }
             emoji_list = extract_emoji_from_message_text(event.get("text", ""))
             if emoji_list:
-                if "hotfire" in emoji_list:
+                if "hotfire" in emoji_list and settings.ASCII_FIRE_URL:
                     store_fire(event["ts"])
 
                 elif "milky_way" in emoji_list:
