@@ -243,7 +243,7 @@ def handle_slack_event(event):
             #   'subtype': 'file_share',
             # }
             file_info = event["files"][0]
-            if file_info["filetype"] in ("jpg", "gif", "png"):
+            if file_info["filetype"] in ("jpg", "gif", "png", "webp"):
                 # if image, fetch file and send to listeners
                 file_response = requests.get(file_info["url_private"], headers={"Authorization": "Bearer %s" % settings.SLACK["bot_access_token"]})
                 if file_response.headers['Content-Type'].startswith('text/html'):
@@ -290,7 +290,7 @@ def handle_slack_event(event):
                     try:
                         file_response = requests.get(attachment['image_url'])
                         assert file_response.ok
-                        assert any(file_response.headers['Content-Type'].startswith(prefix) for prefix in ('image/jpeg', 'image/gif', 'image/png'))
+                        assert any(file_response.headers['Content-Type'].startswith(prefix) for prefix in ('image/jpeg', 'image/gif', 'image/png', 'image/webp'))
                     except (requests.RequestException, AssertionError) as e:
                         logger.error("Failed to fetch URL: %s" % e)
                     else:
