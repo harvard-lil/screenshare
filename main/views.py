@@ -17,6 +17,7 @@ from django.http import HttpResponse
 from django.utils.encoding import force_bytes, force_str
 from django.views.decorators.csrf import csrf_exempt
 from main.helpers import get_message_history, message_for_ts, send_state, send_to_slack
+from main.moongazing import MOONGAZING_URLS
 
 logger = logging.getLogger(__name__)
 
@@ -176,12 +177,25 @@ def store_autoplaying_youtube_video(id, youtube_id, start=None, end=None, loop=T
     html = f'<iframe class="youtube" src="https://youtube.com/embed/{youtube_id}?{urlencode(options)}">'
     store_message(id, html, "black")
 
-def store_image(id, file_response):
+def fetch_and_store_image_from_url(ts, url, as_curl=False, color=None):
+    try:
+        if as_curl:
+            file_response = requests.get(url, headers={'User-Agent': 'curl/7.88.1'})
+        else:
+            file_response = requests.get(url)
+        assert file_response.ok
+        assert any(file_response.headers['Content-Type'].startswith(prefix) for prefix in ('image/jpeg', 'image/gif', 'image/png', 'image/webp'))
+    except (requests.RequestException, AssertionError) as e:
+        logger.error("Failed to fetch URL: %s" % e)
+    else:
+        store_image(ts, file_response, color)
+
+def store_image(id, file_response, color=None):
     """ Add requested file to message_history """
     encoded_image = "<img src='data:%s;base64,%s'>" % (
         file_response.headers['Content-Type'],
         base64.b64encode(file_response.content).decode())
-    store_message(id, encoded_image)
+    store_message(id, encoded_image, color)
 
 def store_message(id, html, color=None):
     with get_message_history() as message_history:
@@ -288,14 +302,7 @@ def handle_slack_event(event):
                     #      'ts': '1532713362.000505',
                     #   },
                     # }
-                    try:
-                        file_response = requests.get(attachment['image_url'])
-                        assert file_response.ok
-                        assert any(file_response.headers['Content-Type'].startswith(prefix) for prefix in ('image/jpeg', 'image/gif', 'image/png', 'image/webp'))
-                    except (requests.RequestException, AssertionError) as e:
-                        logger.error("Failed to fetch URL: %s" % e)
-                    else:
-                        store_image(message['ts'], file_response)
+                    fetch_and_store_image_from_url(message['ts'], attachment['image_url'])
 
             elif event['previous_message'].get('attachments'):
                 # if edited message doesn't have attachment but previous_message did, attachment was hidden -- delete
@@ -322,6 +329,9 @@ def handle_slack_event(event):
 
                 elif any((matching_emoji := emoji) in settings.AMBIENT_YOUTUBE_VIDEOS.keys() for emoji in emoji_list):
                     store_ambient_youtube_video(event['ts'], matching_emoji)
+
+                elif any((matching_emoji := emoji).endswith("moon") for emoji in emoji_list):
+                    fetch_and_store_image_from_url(event["ts"], random.choice(MOONGAZING_URLS), as_curl=True, color="black")
 
 
     # handle reactions
