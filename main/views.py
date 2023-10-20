@@ -129,6 +129,20 @@ def store_astronomy_image(id, random_day=False, attempts=0):
 
     send_to_slack(settings.DEFAULT_POST_CHANNEL, id, txt)
 
+def store_sandwich(id):
+    sando_dir = "static/img/sando_grids/"
+    img = random.choice(os.listdir(sando_dir))
+    filename = os.path.basename(img)
+    sandwich_name = filename[:-9].replace("-", " ")
+
+    with open(sando_dir + img, "rb") as f:
+        encoded_image = "<img src='data:image/png;base64,%s'>" % (
+            base64.b64encode(f.read()).decode())
+    store_message(id, encoded_image)
+
+    txt = f':yum: "{sandwich_name}" :yum:'
+    send_to_slack(settings.DEFAULT_POST_CHANNEL, id, txt)
+
 def store_ambient_youtube_video(id, emoji):
     config = settings.AMBIENT_YOUTUBE_VIDEOS[emoji]
     youtube_id = config["youtube_id"]
@@ -315,6 +329,9 @@ def handle_slack_event(event):
             if emoji_list:
                 if "hotfire" in emoji_list and settings.ASCII_FIRE_URL:
                     store_fire(event["ts"])
+
+                elif "sandwich" in emoji_list:
+                    store_sandwich(event["ts"])
 
                 elif "milky_way" in emoji_list:
                     store_astronomy_image(event["ts"], random_day="random" in event.get("text", ""))
