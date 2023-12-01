@@ -22,6 +22,15 @@ html, body, #app {
     padding: 0;
 }
 
+/* make the literature clock full-screen */
+#app:has(iframe.literature-clock) {
+    padding: 0;
+}
+
+iframe.literature-clock {
+    border: 0;
+}
+
 iframe.youtube {
     border: 0;
 }

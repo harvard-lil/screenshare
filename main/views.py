@@ -76,6 +76,15 @@ def store_fire(id):
     """
     store_message(id, video_html, 'black')
 
+
+def store_literature_clock(id):
+    """ Add @JohsEnevoldsen's literature clock to message history """
+    iframe_html = f"""
+        <iframe class="literature-clock" src="https://literature-clock.jenevoldsen.com/?sfw=yes">
+    """
+    store_message(id, iframe_html)
+
+
 def store_astronomy_image(id, random_day=False, attempts=0):
     """ Add NASA's astronomy image of the day to message history """
     apod_url = "https://apod.nasa.gov/apod"
@@ -350,6 +359,9 @@ def handle_slack_event(event):
 
                 elif any((matching_emoji := emoji).endswith("moon") for emoji in emoji_list):
                     fetch_and_store_image_from_url(event["ts"], random.choice(MOONGAZING_URLS), as_curl=True, color="black")
+
+                elif any((matching_emoji := emoji).startswith("clock") for emoji in emoji_list):
+                    store_literature_clock(event["ts"])
 
 
     # handle reactions
