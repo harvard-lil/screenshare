@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "screenshare"
-version = "0.4.0"
+version = "0.4.1"
 description = ""
 authors = ["Library Innovation Lab <lil@law.harvard.edu>"]
 license = "MIT"
