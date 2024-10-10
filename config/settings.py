@@ -29,8 +29,8 @@ DEBUG = env('DEBUG')
 INSTALLED_APPS = [
     'channels',
     # 'django.contrib.admin',
-    # 'django.contrib.auth',
-    # 'django.contrib.contenttypes',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
     # 'django.contrib.sessions',
     'django.contrib.messages',
     # Disable Django's own staticfiles handling in favour of WhiteNoise, for
