@@ -1,0 +1,13 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches: [develop]
+
+jobs:
+  deploy:
+    uses: harvard-lil/lil-actions/.github/workflows/ecs-simple-deploy.yml@main
+    with:
+      app-name: screenshare
+    secrets:
+      aws-role-arn: ${{ secrets.AWS_ROLE_ARN }}

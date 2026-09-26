@@ -1,23 +1,15 @@
 import base64
 from datetime import datetime, time
-import hashlib
-import hmac
-import json
 import logging
 import pytz
 import random
 import re
 import requests
-import threading
 from urllib.parse import urlencode
 import os
 import tempfile
 
 from django.conf import settings
-from django.core.exceptions import SuspiciousOperation
-from django.http import HttpResponse
-from django.utils.encoding import force_bytes, force_str
-from django.views.decorators.csrf import csrf_exempt
 from main.helpers import get_message_history, message_for_ts, send_state, send_to_slack
 from main.moongazing import MOONGAZING_URLS
 
@@ -25,17 +17,6 @@ logger = logging.getLogger(__name__)
 
 
 ### helpers ###
-
-def verify_slack_request(request):
-    """ Raise SuspiciousOperation if request was not signed by Slack. """
-    basestring = b":".join([
-        b"v0",
-        force_bytes(request.META.get("HTTP_X_SLACK_REQUEST_TIMESTAMP", b"")),
-        request.body
-    ])
-    expected_signature = 'v0=' + hmac.new(settings.SLACK['signing_secret'], basestring, hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(expected_signature, force_str(request.META.get("HTTP_X_SLACK_SIGNATURE", ""))):
-        raise SuspiciousOperation("Slack signature verification failed")
 
 colors = ['black', 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'brown']
 def handle_reactions(message, is_most_recent):
@@ -203,11 +184,19 @@ def store_autoplaying_youtube_video(id, youtube_id, start=None, end=None, loop=T
     store_message(id, html, "black")
 
 def fetch_and_store_image_from_url(ts, url, as_curl=False, color=None):
+    """ Fetch an image from a URL posted in Slack, through the egress proxy if one is configured """
+    session = requests.Session()
+    session.trust_env = False  # NO_PROXY and friends must not bypass the egress proxy
+    if settings.EGRESS_PROXY_URL:
+        session.proxies = {"http": settings.EGRESS_PROXY_URL, "https": settings.EGRESS_PROXY_URL}
     try:
         if as_curl:
-            file_response = requests.get(url, headers={'User-Agent': 'curl/7.88.1'})
+            file_response = session.get(url, headers={'User-Agent': 'curl/7.88.1'}, timeout=20)
         else:
-            file_response = requests.get(url)
+            file_response = session.get(url, timeout=20)
+        # The proxy marks its own answers (refused or unreachable destinations)
+        # with this header and strips it from responses that come from sites.
+        assert 'X-Smokescreen-Error' not in file_response.headers, file_response.headers.get('X-Smokescreen-Error')
         assert file_response.ok
         assert any(file_response.headers['Content-Type'].startswith(prefix) for prefix in ('image/jpeg', 'image/gif', 'image/png', 'image/webp'))
     except (requests.RequestException, AssertionError) as e:
@@ -240,29 +229,11 @@ def delete_message(id):
             if is_most_recent and message_history:
                 send_state(message_history[-1])
 
-### views ###
-
-@csrf_exempt
-def slack_event(request):
-    """ Handle message from Slack. """
-    if not settings.DEBUG:
-        verify_slack_request(request)
-
-    event = json.loads(request.body.decode("utf-8"))
-    logger.info(event)
-
-    # url verification
-    if event["type"] == "url_verification":
-        return HttpResponse(event["challenge"], content_type='text/plain')
-    else:
-        # handle event in a background thread so Slack doesn't resend if it takes too long
-        threading.Thread(target=handle_slack_event, args=(event,)).start()
-
-        # 200 to tell Slack not to resend
-        return HttpResponse()
-
+### Slack events ###
 
 def handle_slack_event(event):
+    """ Handle an Events API payload delivered by main/management/commands/slack_socket_mode.py. """
+    logger.info(event)
 
     event = event["event"]
 
