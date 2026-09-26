@@ -139,10 +139,11 @@ CHANNEL_LAYERS = {
     },
 }
 
-# slack secrets
+# slack secrets, used by the slack_socket_mode process; the web process
+# serving the display does not need them
 SLACK = {
-    'signing_secret': env.bytes("SLACK_SIGNING_SECRET"),
-    'bot_access_token': env("SLACK_BOT_ACCESS_TOKEN"),
+    'app_token': env("SLACK_APP_TOKEN", default=None),
+    'bot_access_token': env("SLACK_BOT_ACCESS_TOKEN", default=None),
 }
 
 CACHES = {
@@ -181,7 +182,7 @@ LOGGING = {
             'level': 'WARNING',
             'handlers': ['console'],
         },
-        'main.views': {
+        'main': {
             'level': env("LOGLEVEL", default="DEBUG"),
             'handlers': ['console'],
             # required to avoid double logging with root logger
@@ -199,3 +200,8 @@ for video in (v for k,v in env.ENVIRON.items() if k.startswith('AMBIENT_YOUTUBE_
     AMBIENT_YOUTUBE_VIDEOS[emoji] = config
 
 PRIMITIVE_URL = env("PRIMITIVE_URL", default=None)
+
+# HTTP proxy for fetching image URLs posted in Slack. In production it is the
+# task's egress-proxy sidecar, which refuses private and link-local
+# destinations. Unset, those fetches connect directly.
+EGRESS_PROXY_URL = env("EGRESS_PROXY_URL", default=None)

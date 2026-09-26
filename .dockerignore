@@ -1,0 +1,10 @@
+.git
+.github
+jack-local
+venv
+staticfiles
+config/.env
+**/__pycache__
+*.pyc
+*.sqlite3
+*.rdb

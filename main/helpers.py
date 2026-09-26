@@ -1,7 +1,7 @@
 import json
 from contextlib import contextmanager
-from slack import WebClient
-from slack.errors import SlackApiError
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
