@@ -233,9 +233,8 @@ def delete_message(id):
 
 def handle_slack_event(event):
     """ Handle an Events API payload delivered by main/management/commands/slack_socket_mode.py. """
-    logger.info(event)
-
     event = event["event"]
+    logger.info(event)  # the inner event only; the envelope carries Slack's verification token
 
     # message in channel
     if event["type"] == "message":
