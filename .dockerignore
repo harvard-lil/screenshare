@@ -8,3 +8,4 @@ config/.env
 *.pyc
 *.sqlite3
 *.rdb
+.venv
