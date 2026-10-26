@@ -59,17 +59,17 @@ To try this out locally:
 - add the app to whatever channel you like, and set the channel name
   in `config/.env` like this: `POST_CHANNEL='#bottest'`
 - optionally set `ASCII_FIRE_URL` in `config/.env`
-- install [Poetry](https://python-poetry.org/), probably with `curl
-  -sSL https://install.python-poetry.org | python3 -`
-- in another terminal, in this directory, run `poetry install`
-- in the same terminal, generate a secret key with `poetry run python
+- install [uv](https://docs.astral.sh/uv/), probably with `brew
+  install uv`
+- in another terminal, in this directory, run `uv sync`
+- in the same terminal, generate a secret key with `uv run python
   -c "from django.core.management.utils import get_random_secret_key;
   print(get_random_secret_key())"` and set the `SECRET_KEY` in
   `config/.env`
-- in the same terminal, in this directory, run `poetry run ./manage.py collectstatic`
-- in the same terminal, in this directory, run `poetry run
+- in the same terminal, in this directory, run `uv run ./manage.py collectstatic`
+- in the same terminal, in this directory, run `uv run
   daphne config.asgi:application --port 8000 --bind 0.0.0.0 -v2`
-- in yet another terminal, in this directory, run `poetry run
+- in yet another terminal, in this directory, run `uv run
   ./manage.py slack_socket_mode`
 
 You should now be able to open http://127.0.0.1:8000/, post an image
@@ -84,8 +84,8 @@ for development.
 Development
 -----------
 
-For development, use [Poetry](https://python-poetry.org/). The
-`Dockerfile` exports its requirements from `poetry.lock` at build
+For development, use [uv](https://docs.astral.sh/uv/). The
+`Dockerfile` installs the dependencies locked in `uv.lock` at build
 time.
 
 Note that `daphne`, when run as shown above, does not auto-reload on
