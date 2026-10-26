@@ -1,11 +1,13 @@
 FROM python:3.11-slim AS builder
 
-RUN pip install --no-cache-dir poetry==1.8.4 poetry-plugin-export==1.8.0
+RUN pip install --no-cache-dir pip==26.2.2 \
+    && pip install --no-cache-dir poetry==1.8.4 poetry-plugin-export==1.8.0
 
 COPY pyproject.toml poetry.lock ./
 
 RUN python -m venv /opt/venv \
     && poetry export -f requirements.txt --only main -o requirements.txt \
+    && /opt/venv/bin/pip install --no-cache-dir pip==26.2.2 \
     && /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
 
 FROM python:3.11-slim
@@ -23,8 +25,10 @@ COPY --from=builder /opt/venv /opt/venv
 COPY . .
 
 # settings.py requires SECRET_KEY at import; this placeholder exists only for
-# the build step and is not in the image's environment.
+# the build step and is not in the image's environment. The base image's own
+# pip is removed; the app runs from /opt/venv, which has its own pip.
 RUN SECRET_KEY=collectstatic python manage.py collectstatic --noinput \
+    && rm -rf /usr/local/lib/python3.11/site-packages/pip* /usr/local/bin/pip* \
     && useradd --system --no-create-home appuser
 
 USER appuser
