@@ -341,7 +341,7 @@ def handle_slack_event(event):
                                     "polygon": 8
                                 }
                                 # parse this message for a primitive command
-                                pattern = re.compile(".*`primrose( shape=[a-z_]+)?( n=\d+)?`.*")
+                                pattern = re.compile(r".*`primrose( shape=[a-z_]+)?( n=\d+)?`.*")
                                 result = pattern.search(event["text"])
                                 if result:
                                     formdata = {}
